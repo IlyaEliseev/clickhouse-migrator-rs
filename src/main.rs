@@ -92,6 +92,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // insert.end().await?;
 
         // locale.query(&format!("OPTIMIZE TABLE {} FINAL", table_with_schema)).execute().await?;
+    
+    // fetch data
+    // docker exec -i clickhouse-test clickhouse-client --host host.docker.internal --port 9000 --user default --password "" --query "select * from sp.events limit 10 format native" | docker exec -i clickhouse-test clickhouse-client --user user --password  "pwd" --query "insert into sp.events format native"
     }
 
     Ok(())
