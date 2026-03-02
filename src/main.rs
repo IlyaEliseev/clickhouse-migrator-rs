@@ -31,14 +31,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // }
 
     let remote_t = ClientMigrator::new(
-        &config.src_url,
+        &config.src_host,
+        &config.src_port,
         &config.src_password.as_deref().unwrap_or(""),
         &config.src_user,
         config.migr_type
     );
 
     let locale_t = ClientMigrator::new(
-        &config.dst_url,
+        &config.dst_host,
+        &config.dst_port,
         &config.dst_password.as_deref().unwrap_or(""),
         &config.dst_user,
         config.migr_type

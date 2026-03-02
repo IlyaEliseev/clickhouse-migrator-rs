@@ -14,15 +14,15 @@ pub struct MigratorConfig {
     pub migr_type: MigrationType,
 
     /// Источник: HOST (Env: SRC_HOST)
-    #[arg(long, env = "SRC_URL", default_value = "127.0.0.1")]
-    pub src_url: String,
+    #[arg(long, env = "SRC_URL", default_value = "host.docker.internal")]
+    pub src_host: String,
 
     /// Источник: PORT (Env: SRC_PORT)
     #[arg(long, env = "SRC_URL", default_value = "9000")]
     pub src_port: String,
 
     /// Источник: User (Env: SRC_USER)
-    #[arg(long, env = "SRC_USER", default_value = "admin")]
+    #[arg(long, env = "SRC_USER", default_value = "default")]
     pub src_user: String,
 
     /// Источник: Password (Env: SRC_PASSWORD)
@@ -30,15 +30,19 @@ pub struct MigratorConfig {
     pub src_password: Option<String>,
 
     /// Источник: Container (Env: SRC_CONTAINER)
-    #[arg(long, env = "SRC_CONTAINER", default_value = "clickhouse-server-db")]
+    #[arg(long, env = "SRC_CONTAINER")]
     pub src_container: String,
 
-    /// Цель: URL (Env: DST_URL)
-    #[arg(long, env = "DST_URL", default_value = "http://127.0.0.1:8333")]
-    pub dst_url: String,
+    /// Цель: HOST (Env: DST_URL)
+    #[arg(long, env = "DST_HOST", default_value = "127.0.0.1")]
+    pub dst_host: String,
+
+    /// Источник: PORT (Env: DST_PORT)
+    #[arg(long, env = "DST_URL")]
+    pub dst_port: String,
 
     /// Цель: User (Env: DST_USER)
-    #[arg(long, env = "DST_USER", default_value = "admin")]
+    #[arg(long, env = "DST_USER")]
     pub dst_user: String,
 
     /// Цель: Password (Env: DST_PASSWORD)
@@ -46,7 +50,7 @@ pub struct MigratorConfig {
     pub dst_password: Option<String>,
 
     /// Цель: Container (Env: DST_CONTAINER)
-    #[arg(long, env = "DST_CONTAINER", default_value = "clickhouse-server-l")]
+    #[arg(long, env = "DST_CONTAINER")]
     pub dst_container: String,
 
     /// База данных (Env: DB_NAME)

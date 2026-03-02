@@ -16,22 +16,15 @@ pub struct ClientMigrator {
 }
 
 impl ClientMigrator {
-    pub fn new(ulr: &str, password: &str, user: &str, migr_type: MigrationType) -> Self {
+    pub fn new(host: &str, port:&str, password: &str, user: &str, migr_type: MigrationType) -> Self {
         let client = Client::default()
-            .with_url(ulr)
+            .with_url(format!("http://{}:{}", host, port))
             .with_user(user)
             .with_password(password)
             .with_compression(clickhouse::Compression::Lz4);
 
         Self { client, migr_type }
     }
-
-    // fn transfer_args(migr_type: MigrationType, container_name:&str, host:&str, port:&str, user:&str, password:&str) -> TransferArgs {
-    //     let mut src_args = vec!["exec".to_string(), "-i".to_string()];
-    //     let mut dest_args = vec!["exec".to_string(), "-i".to_string()];
-
-    //     TransferArgs { dest: (), src: () }
-    // }
 
     fn src_transfer_args(migr_type: MigrationType, container_name:&str, host:&str, port:&str, user:&str, password:&str) -> Vec<String> {
         match migr_type {
@@ -94,25 +87,22 @@ impl Migrator for ClientMigrator {
     async fn transfer_data(&self, table: &str, size_table_label: &str, config:&MigratorConfig) -> Result<()> {
         let src_args = ClientMigrator::src_transfer_args(
             config.migr_type, 
-            &config.src_container, host, port, user, password);
+            &config.src_container, 
+            &config.src_host, 
+            &config.src_port, 
+            &config.src_user, 
+            &config.src_password.as_deref().unwrap_or(""));
+
+        let dst_args =    ClientMigrator::src_transfer_args(
+            config.migr_type, 
+            &config.dst_container, 
+            &config.dst_host, 
+            &config.dst_port, 
+            &config.dst_user, 
+            &config.dst_password.as_deref().unwrap_or(""));
 
         let mut source_proc = Command::new("docker")
-            .args([
-                "exec",
-                "-i",
-                "clickhouse-server-db",
-                "clickhouse-client",
-                "--host",
-                "127.0.0.1",
-                "--port",
-                "9000",
-                "--user",
-                "admin",
-                "--password",
-                "pwd",
-                "--query",
-                "select * from sp.events limit 10 format native",
-            ])
+            .args(&src_args)
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit())
             .spawn()
@@ -124,18 +114,7 @@ impl Migrator for ClientMigrator {
             .ok_or_else(|| anyhow!("failed to open stdout"))?;
 
         let mut dest_proc = Command::new("docker")
-            .args([
-                "exec",
-                "-i",
-                "clickhouse-server-l",
-                "clickhouse-client",
-                "--user",
-                "admin",
-                "--password",
-                "pwd",
-                "--query",
-                "insert into sp.events format native",
-            ])
+            .args(&dst_args)
             .stdin(source_stdout)
             .stderr(Stdio::inherit())
             .spawn()
