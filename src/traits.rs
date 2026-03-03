@@ -6,7 +6,6 @@ use serde::de::DeserializeOwned;
 
 pub trait Migrator {
     async fn create_database(&self, db_name: &str) -> Result<()>;
-    async fn execute_ddl(&self, ddl: &str) -> Result<()>;
     async fn transfer_data(
         &self,
         table: &str,

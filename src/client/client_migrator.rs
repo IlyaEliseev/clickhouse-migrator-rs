@@ -130,10 +130,6 @@ impl Migrator for ClientMigrator {
         Ok(())
     }
 
-    async fn execute_ddl(&self, ddl: &str) -> Result<()> {
-        todo!()
-    }
-
     async fn transfer_data(
         &self,
         table: &str,
