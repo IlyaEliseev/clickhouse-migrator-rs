@@ -126,7 +126,8 @@ impl ClientMigrator {
 
 impl Migrator for ClientMigrator {
     async fn create_database(&self, db_name: &str) -> Result<()> {
-        todo!()
+        self.dst_client.query(&format!("CREATE DATABASE IF NOT EXISTS {}", db_name)).execute().await?;
+        Ok(())
     }
 
     async fn execute_ddl(&self, ddl: &str) -> Result<()> {
