@@ -9,7 +9,6 @@ use anyhow::{Context, Result, anyhow};
 use clickhouse::{Client, Row, RowOwned};
 use serde::de::DeserializeOwned;
 
-
 pub struct ClientMigrator {
     src_client: Client,
     dst_client: Client,
@@ -19,13 +18,13 @@ pub struct ClientMigrator {
 impl ClientMigrator {
     pub fn new(config: MigratorConfig) -> Self {
         let src_client = Client::default()
-            .with_url(format!("http://{}:{}", &config.src_host, &config.src_port))
+            .with_url(format!("http://{}:{}", &config.src_host, &config.src_http_port))
             .with_user(&config.src_user)
             .with_password(config.src_password.as_deref().unwrap_or(""))
             .with_compression(clickhouse::Compression::Lz4);
 
         let dst_client = Client::default()
-            .with_url(format!("http://{}:{}", &config.dst_host, &config.dst_port))
+            .with_url(format!("http://{}:{}", &config.dst_host, &config.dst_http_port))
             .with_user(&config.dst_user)
             .with_password(config.dst_password.as_deref().unwrap_or(""))
             .with_compression(clickhouse::Compression::Lz4);
@@ -37,121 +36,68 @@ impl ClientMigrator {
         }
     }
 
-    fn src_transfer_args(
-        migr_type: MigrationType,
-        container_name: &str,
-        host: &str,
-        port: &str,
-        user: &str,
-        password: &str,
-    ) -> Vec<String> {
-        match migr_type {
-            MigrationType::InternalHostToDocker => vec![
-                "exec".to_string(),
-                "-i".to_string(),
-                container_name.to_string(),
-                "clickhouse-client".to_string(),
-                "--host".to_string(),
-                "host.docker.internal".to_string(),
-                "--port".to_string(),
-                port.to_string(),
-                "--user".to_string(),
-                user.to_string(),
-                "--password".to_string(),
-                password.to_string(),
-                "--query".to_string(),
-                "select * from sp.events limit 10 format native".to_string(),
-            ],
+    fn src_transfer_args(&self) -> Vec<&str> {
+        let config = &self.config;
 
-            MigrationType::DockerToDoker => vec![
-                "exec".to_string(),
-                "-i".to_string(),
-                container_name.to_string(),
-                "clickhouse-client".to_string(),
-                "--host".to_string(),
-                host.to_string(),
-                "--port".to_string(),
-                port.to_string(),
-                "--user".to_string(),
-                user.to_string(),
-                "--password".to_string(),
-                password.to_string(),
-                "--query".to_string(),
-                "select * from sp.events limit 10 format native".to_string(),
-            ],
-        }
+        let mut args = vec!["exec", "-i"];
+
+        match config.migr_type {
+            MigrationType::InternalHostToDocker => args.push(&config.dst_container),
+
+            MigrationType::DockerToDocker => args.push(config.src_container.as_deref().unwrap_or("")),
+        };
+
+        args.extend([
+            "clickhouse-client",
+            "--host",
+            &config.src_host,
+            "--port",
+            &config.src_tcp_port,
+            "--user",
+            &config.src_user,
+            "--password",
+            config.src_password.as_deref().unwrap_or(""),
+            "--query",
+            "select * from sp.events limit 10 format native",
+        ]);
+
+        args
     }
 
-    fn dest_transfer_args(
-        migr_type: &MigrationType,
-        container_name: &str,
-        host: &str,
-        port: &str,
-        user: &str,
-        password: &str,
-    ) -> Vec<String> {
-        match migr_type {
-            MigrationType::InternalHostToDocker => vec![
-                "exec".to_string(),
-                "-i".to_string(),
-                container_name.to_string(),
-                "clickhouse-client".to_string(),
-                "--user".to_string(),
-                user.to_string(),
-                "--password".to_string(),
-                password.to_string(),
-                "--query".to_string(),
-                "insert into sp.events format native".to_string(),
-            ],
+    fn dest_transfer_args(&self) -> Vec<&str> {
+        let config = &self.config;
 
-            MigrationType::DockerToDoker => vec![
-                "exec".to_string(),
-                "-i".to_string(),
-                container_name.to_string(),
-                "clickhouse-client".to_string(),
-                "--user".to_string(),
-                user.to_string(),
-                "--password".to_string(),
-                password.to_string(),
-                "--query".to_string(),
-                "insert into sp.events format native".to_string(),
-            ],
-        }
+            vec![
+                "exec",
+                "-i",
+                &config.dst_container,
+                "clickhouse-client",
+                "--user",
+                &config.dst_user,
+                "--password",
+                &config.dst_password.as_deref().unwrap_or(""),
+                "--query",
+                "insert into sp.events format native",
+            ]
     }
 }
 
 impl Migrator for ClientMigrator {
     async fn create_database(&self, db_name: &str) -> Result<()> {
-        self.dst_client.query(&format!("CREATE DATABASE IF NOT EXISTS {}", db_name)).execute().await?;
+        self.dst_client
+            .query(&format!("CREATE DATABASE IF NOT EXISTS {}", db_name))
+            .execute()
+            .await?;
         Ok(())
     }
 
-    async fn transfer_data(
-        &self,
-        table: &str,
-        size_table_label: &str,
-        config: &MigratorConfig,
-    ) -> Result<()> {
-        let src_args = ClientMigrator::src_transfer_args(
-            config.migr_type,
-            &config.src_container,
-            &config.src_host,
-            &config.src_port,
-            &config.src_user,
-            &config.src_password.as_deref().unwrap_or(""),
-        );
-
-        let dst_args = ClientMigrator::src_transfer_args(
-            config.migr_type,
-            &config.dst_container,
-            &config.dst_host,
-            &config.dst_port,
-            &config.dst_user,
-            &config.dst_password.as_deref().unwrap_or(""),
-        );
+    async fn transfer_data(&self) -> Result<()> {
+        let config = &self.config;
+        let src_args = &self.src_transfer_args();
+        let dst_args = &self.dest_transfer_args();
 
         let mut source_proc = Command::new("docker")
-            .args(&src_args)
+            .args(src_args)
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit())
             .spawn()
@@ -163,7 +109,7 @@ impl Migrator for ClientMigrator {
             .ok_or_else(|| anyhow!("failed to open stdout"))?;
 
         let mut dest_proc = Command::new("docker")
-            .args(&dst_args)
+            .args(dst_args)
             .stdin(source_stdout)
             .stderr(Stdio::inherit())
             .spawn()
@@ -173,10 +119,10 @@ impl Migrator for ClientMigrator {
         let status_dest = dest_proc.wait()?;
 
         if status_dest.success() {
-            println!("Данные перенесены");
+            log::info!("Данные перенесены");
             Ok(())
         } else {
-            Err(anyhow!("Ошибка при переносе данных {}", table))
+            Err(anyhow!("Ошибка при переносе данных {}", "events"))
         }
     }
 
@@ -198,8 +144,7 @@ impl Migrator for ClientMigrator {
             .find(|ch| ch.starts_with("sp."))
             .unwrap_or(&table_name);
 
-        log::info!("Таблица: {}", table_with_schema);
-
+        
         match self.dst_client.query(&ddl).execute().await {
             Ok(_) => {
                 log::info!("Таблица {} создана", table_name);
@@ -207,6 +152,7 @@ impl Migrator for ClientMigrator {
             }
             Err(e) => {
                 if e.to_string().contains("57") {
+                    log::info!("Таблица: {} уже сушествует и будет пересоздана", table_with_schema);
                     self.dst_client
                         .query(&format!("drop table {}", table_with_schema))
                         .execute()

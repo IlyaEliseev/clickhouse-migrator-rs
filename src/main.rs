@@ -2,19 +2,52 @@ mod client;
 mod config;
 mod models;
 mod traits;
-
-use crate::traits::Migrator;
-use clap::Parser;
+use std::io::Write;
+use crate::{config::MigrationType, traits::Migrator};
+use anyhow::{Context, Result, anyhow};
+use clap::{Parser, CommandFactory};
 use client::client_migrator::ClientMigrator;
 use config::MigratorConfig;
+use env_logger::Env;
 use models::TableInfo;
-use anyhow::{Context, Result, anyhow};
 
 #[tokio::main]
 async fn main() -> Result<()> {
     let config = MigratorConfig::parse();
-    simple_logger::init().unwrap();
+    if config.migr_type == MigrationType::DockerToDocker && config.src_container.is_none() {
+        let mut cmd = MigratorConfig::command();
+        cmd.error(clap::error::ErrorKind::MissingRequiredArgument,
+        "--src-container обязатален, если --migr-type docker-to-docker").exit();
+    }
 
+    // let config = MigratorConfig 
+    // { 
+    //     migr_type: config::MigrationType::InternalHostToDocker, 
+    //     src_host: "host.docker.internal".to_string(), 
+    //     src_tcp_port: "9000".to_string(), 
+    //     src_http_port: "8123".to_string(), 
+    //     src_user: "default".to_string(), 
+    //     src_password: Some("".to_string()), 
+    //     src_container: "clickhouse-test".to_string(), 
+    //     dst_host: "127.0.0.1".to_string(), 
+    //     dst_tcp_port: "9998".to_string(), 
+    //     dst_http_port: "8334".to_string(), 
+    //     dst_user: "user".to_string(), 
+    //     dst_password: Some("pwd".to_string()), 
+    //     dst_container: "clickhouse-test".to_string(), 
+    //     database: "sp".to_string() 
+    // };
+
+    env_logger::Builder::from_env(Env::default().default_filter_or("info"))
+    .format(|buf, record| {
+        writeln!(buf, "{} {}", 
+            chrono::Local::now().format("%Y-%m-%dT%H:%M:%S%.3fZ"),
+            record.args())
+    })
+    .init();
+
+    //simple_logger::init().unwrap();
+    let database = config.database.clone();
     log::info!("Мигратор запущен");
     let client = ClientMigrator::new(config);
 
@@ -30,16 +63,18 @@ async fn main() -> Result<()> {
     //     .with_password("pwd")
     //     .with_compression(clickhouse::Compression::Lz4);
 
-    let tables = client.fetch::<TableInfo>("SELECT name, create_table_query, formatReadableSize(total_bytes) size FROM system.tables WHERE database = 'sp' AND engine NOT LIKE '%View%' AND engine != 'Distributed' AND name = 'events'").await.context("Fetch data error")?;
+    let tables = client.fetch::<TableInfo>("SELECT name, create_table_query, ifNull(formatReadableSize(total_bytes), '0') size FROM system.tables WHERE database = 'sp' AND engine NOT LIKE '%View%' AND engine != 'Distributed' AND name = 'events'").await.context("Fetch data error")?;
 
     // let tables = remote
     //     .query("SELECT name, create_table_query, formatReadableSize(total_bytes) size FROM system.tables WHERE database = 'sp' AND engine NOT LIKE '%View%' AND engine != 'Distributed' AND name = 'events'")
     //     .fetch_all::<TableInfo>()
     //     .await?;
 
-    for row in tables {
 
+    client.create_database(&database).await?;
+    for row in tables {
         client.create_table(row).await?;
+        client.transfer_data().await?;
         // let table_name = row.name;
         // let ddl = row.create_table_query;
         // let size = row.size;
