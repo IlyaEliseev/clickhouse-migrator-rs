@@ -3,9 +3,10 @@ mod config;
 mod models;
 mod traits;
 
+use crate::traits::Migrator;
 use config::MigratorConfig;
 use models::TableInfo;
-use {client::client_migrator::ClientMigrator, traits::Migrator};
+use {client::client_migrator::ClientMigrator};
 use clap::Parser;
 use clickhouse::Client;
 use clickhouse::error::Result;
