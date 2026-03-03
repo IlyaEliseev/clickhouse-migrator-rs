@@ -11,19 +11,26 @@ struct TransferArgs {
 }
 
 pub struct ClientMigrator {
-    client: Client,
-    migr_type: MigrationType,
+    src_client: Client,
+    dst_client:Client,
+    config:MigratorConfig
 }
 
 impl ClientMigrator {
-    pub fn new(host: &str, port:&str, password: &str, user: &str, migr_type: MigrationType) -> Self {
-        let client = Client::default()
-            .with_url(format!("http://{}:{}", host, port))
-            .with_user(user)
-            .with_password(password)
+    pub fn new(config:MigratorConfig) -> Self {
+        let src_client = Client::default()
+            .with_url(format!("http://{}:{}", &config.src_host, &config.src_port))
+            .with_user(&config.src_user)
+            .with_password(config.src_password.as_deref().unwrap_or(""))
             .with_compression(clickhouse::Compression::Lz4);
 
-        Self { client, migr_type }
+        let dst_client = Client::default()
+            .with_url(format!("http://{}:{}", &config.dst_host, &config.dst_port))
+            .with_user(&config.dst_user)
+            .with_password(config.dst_password.as_deref().unwrap_or(""))
+            .with_compression(clickhouse::Compression::Lz4);
+
+        Self { src_client, dst_client, config }
     }
 
     fn src_transfer_args(migr_type: MigrationType, container_name:&str, host:&str, port:&str, user:&str, password:&str) -> Vec<String> {
@@ -135,7 +142,7 @@ impl Migrator for ClientMigrator {
     where
         T: Row + RowOwned + DeserializeOwned + Send + Sync,
     {
-        let res = self.client.query(ddl).fetch_all::<T>().await?;
+        let res = self.src_client.query(ddl).fetch_all::<T>().await?;
 
         Ok(res)
     }

@@ -6,7 +6,7 @@ pub enum MigrationType {
     InternalHostToDocker,
 }
 
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone)]
 #[command(author, version, about)]
 pub struct MigratorConfig {
     /// Тип миграции
