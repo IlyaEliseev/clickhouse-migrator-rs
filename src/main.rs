@@ -3,9 +3,9 @@ mod config;
 mod models;
 mod traits;
 
-use crate::config::MigratorConfig;
-use crate::models::TableInfo;
-use crate::{client::client_migrator::ClientMigrator, traits::Migrator};
+use config::MigratorConfig;
+use models::TableInfo;
+use {client::client_migrator::ClientMigrator, traits::Migrator};
 use clap::Parser;
 use clickhouse::Client;
 use clickhouse::error::Result;
@@ -20,31 +20,11 @@ use std::{
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = MigratorConfig::parse();
-
     simple_logger::init().unwrap();
 
     log::info!("Мигратор запущен");
     let client = ClientMigrator::new(config);
-    // let pb = ProgressBar::new(100);
-    // for _ in (0..100).progress() {
-    //     thread::sleep(Duration::from_secs(1));
-    // }
-
-    // let remote_t = ClientMigrator::new(
-    //     &config.src_host,
-    //     &config.src_port,
-    //     &config.src_password.as_deref().unwrap_or(""),
-    //     &config.src_user,
-    //     config.migr_type
-    // );
-
-    // let locale_t = ClientMigrator::new(
-    //     &config.dst_host,
-    //     &config.dst_port,
-    //     &config.dst_password,
-    //     &config.dst_user,
-    //     config.migr_type
-    // );
+    
     let res = client
         .fetch::<TableInfo>(
             "SELECT name, create_table_query, formatReadableSize(total_bytes) size 
