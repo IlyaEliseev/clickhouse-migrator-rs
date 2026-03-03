@@ -1,6 +1,6 @@
 use crate::config::MigratorConfig;
 use crate::models::TableInfo;
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Result};
 use clickhouse::{Row, RowOwned};
 use serde::de::DeserializeOwned;
 

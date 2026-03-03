@@ -6,13 +6,9 @@ use crate::{
     traits::Migrator,
 };
 use anyhow::{Context, Result, anyhow};
-use clickhouse::{Client, Row, RowOwned, RowRead};
+use clickhouse::{Client, Row, RowOwned};
 use serde::de::DeserializeOwned;
 
-struct TransferArgs {
-    dest: Vec<String>,
-    src: Vec<String>,
-}
 
 pub struct ClientMigrator {
     src_client: Client,

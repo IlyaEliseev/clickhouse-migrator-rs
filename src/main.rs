@@ -5,13 +5,10 @@ mod traits;
 
 use crate::traits::Migrator;
 use clap::Parser;
-use clickhouse::Client;
 use clickhouse::error::Result;
 use client::client_migrator::ClientMigrator;
 use config::MigratorConfig;
-use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
 use models::TableInfo;
-use serde::{Deserialize, Serialize};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -21,24 +18,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     log::info!("Мигратор запущен");
     let client = ClientMigrator::new(config);
 
-    let res = client
-        .fetch::<TableInfo>(
-            "SELECT name, create_table_query, formatReadableSize(total_bytes) size 
-                 FROM system.tables 
-                 WHERE database = 'sp' AND engine NOT LIKE '%View%' AND engine != 'Distributed' AND name = 'events'")
-                 .await?;
+    // let remote = Client::default()
+    //     .with_url("http://127.0.0.1:8123")
+    //     .with_user("admin")
+    //     .with_password("pwd")
+    //     .with_compression(clickhouse::Compression::Lz4);
 
-    let remote = Client::default()
-        .with_url("http://127.0.0.1:8123")
-        .with_user("admin")
-        .with_password("pwd")
-        .with_compression(clickhouse::Compression::Lz4);
-
-    let locale = Client::default()
-        .with_url("http://127.0.0.1:8333")
-        .with_user("admin")
-        .with_password("pwd")
-        .with_compression(clickhouse::Compression::Lz4);
+    // let locale = Client::default()
+    //     .with_url("http://127.0.0.1:8333")
+    //     .with_user("admin")
+    //     .with_password("pwd")
+    //     .with_compression(clickhouse::Compression::Lz4);
 
     let tables = client.fetch::<TableInfo>("SELECT name, create_table_query, formatReadableSize(total_bytes) size FROM system.tables WHERE database = 'sp' AND engine NOT LIKE '%View%' AND engine != 'Distributed' AND name = 'events'").await?;
 
@@ -67,11 +57,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // fetch data
         // docker exec -i clickhouse-test clickhouse-client --host host.docker.internal --port 9000 --user default --password "" --query "select * from sp.events limit 10 format native" | docker exec -i clickhouse-test clickhouse-client --user user --password  "pwd" --query "insert into sp.events format native"
         // docker exec -i clickhouse-server-db clickhouse-client --host 127.0.0.1 --port 9000 --user admin --password "pwd" --query "select * from sp.events limit 10 format native" | docker exec -i clickhouse-server-l clickhouse-client --user admin --password  "pwd" --query "insert into sp.events format native"
-        log::info!(
-            "Старт переноса данных в таблицу {} размер данных {}",
-            table_name,
-            size
-        );
+        // log::info!(
+        //     "Старт переноса данных в таблицу {} размер данных {}",
+        //     table_name,
+        //     size
+        // );
     }
 
     Ok(())
