@@ -4,19 +4,14 @@ mod models;
 mod traits;
 
 use crate::traits::Migrator;
-use config::MigratorConfig;
-use models::TableInfo;
-use {client::client_migrator::ClientMigrator};
 use clap::Parser;
 use clickhouse::Client;
 use clickhouse::error::Result;
+use client::client_migrator::ClientMigrator;
+use config::MigratorConfig;
 use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
+use models::TableInfo;
 use serde::{Deserialize, Serialize};
-
-use std::{
-    fs::remove_dir,
-    process::{Command, Stdio},
-};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -25,7 +20,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     log::info!("Мигратор запущен");
     let client = ClientMigrator::new(config);
-    
+
     let res = client
         .fetch::<TableInfo>(
             "SELECT name, create_table_query, formatReadableSize(total_bytes) size 
@@ -45,24 +40,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_password("pwd")
         .with_compression(clickhouse::Compression::Lz4);
 
-    let tables = remote
-        .query("SELECT name, create_table_query, formatReadableSize(total_bytes) size FROM system.tables WHERE database = 'sp' AND engine NOT LIKE '%View%' AND engine != 'Distributed' AND name = 'events'")
-        .fetch_all::<TableInfo>()
-        .await?;
+    let tables = client.fetch::<TableInfo>("SELECT name, create_table_query, formatReadableSize(total_bytes) size FROM system.tables WHERE database = 'sp' AND engine NOT LIKE '%View%' AND engine != 'Distributed' AND name = 'events'").await?;
+
+    // let tables = remote
+    //     .query("SELECT name, create_table_query, formatReadableSize(total_bytes) size FROM system.tables WHERE database = 'sp' AND engine NOT LIKE '%View%' AND engine != 'Distributed' AND name = 'events'")
+    //     .fetch_all::<TableInfo>()
+    //     .await?;
 
     for row in tables {
-        let table_name = row.name;
-        let ddl = row.create_table_query;
-        let size = row.size;
 
-        let table_with_schema = ddl
-            .split_ascii_whitespace()
-            .find(|ch| ch.starts_with("sp."))
-            .unwrap_or(&table_name);
+        client.create_table(row).await?;
+        // let table_name = row.name;
+        // let ddl = row.create_table_query;
+        // let size = row.size;
 
-        log::info!("Таблица: {}", table_with_schema);
-        locale.query(&ddl).execute().await?;
-        log::info!("Таблица {} создана", table_name);
+        // let table_with_schema = ddl
+        //     .split_ascii_whitespace()
+        //     .find(|ch| ch.starts_with("sp."))
+        //     .unwrap_or(&table_name);
+
+        // log::info!("Таблица: {}", table_with_schema);
+        // locale.query(&ddl).execute().await?;
+        // log::info!("Таблица {} создана", table_name);
         // info!("  Создана");
 
         // fetch data
