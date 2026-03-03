@@ -5,13 +5,13 @@ mod traits;
 
 use crate::traits::Migrator;
 use clap::Parser;
-use clickhouse::error::Result;
 use client::client_migrator::ClientMigrator;
 use config::MigratorConfig;
 use models::TableInfo;
+use anyhow::{Context, Result, anyhow};
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<()> {
     let config = MigratorConfig::parse();
     simple_logger::init().unwrap();
 
@@ -30,7 +30,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     //     .with_password("pwd")
     //     .with_compression(clickhouse::Compression::Lz4);
 
-    let tables = client.fetch::<TableInfo>("SELECT name, create_table_query, formatReadableSize(total_bytes) size FROM system.tables WHERE database = 'sp' AND engine NOT LIKE '%View%' AND engine != 'Distributed' AND name = 'events'").await?;
+    let tables = client.fetch::<TableInfo>("SELECT name, create_table_query, formatReadableSize(total_bytes) size FROM system.tables WHERE database = 'sp' AND engine NOT LIKE '%View%' AND engine != 'Distributed' AND name = 'events'").await.context("Fetch data error")?;
 
     // let tables = remote
     //     .query("SELECT name, create_table_query, formatReadableSize(total_bytes) size FROM system.tables WHERE database = 'sp' AND engine NOT LIKE '%View%' AND engine != 'Distributed' AND name = 'events'")
