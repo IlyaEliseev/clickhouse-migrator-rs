@@ -23,7 +23,7 @@ pub struct MigratorConfig {
 
     /// Источник: HTTP PORT (Env: SRC_HTTP_PORT)
     #[arg(long, env = "SRC_HTTP_PORT", default_value = "8123")]
-    pub src_http_port:String,
+    pub src_http_port: String,
 
     /// Источник: User (Env: SRC_USER)
     #[arg(long, env = "SRC_USER", default_value = "default")]
@@ -64,4 +64,8 @@ pub struct MigratorConfig {
     /// База данных (Env: DB_NAME)
     #[arg(short, long, env = "DB_NAME", default_value = "sp")]
     pub database: String,
+
+    /// Имя таблицы (Env: TABLE_NAME)
+    #[arg(short, long, env = "TABLE_NAME")]
+    pub table_name: Option<String>,
 }
