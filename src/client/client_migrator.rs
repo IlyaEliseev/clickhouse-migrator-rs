@@ -18,13 +18,19 @@ pub struct ClientMigrator {
 impl ClientMigrator {
     pub fn new(config: MigratorConfig) -> Self {
         let src_client = Client::default()
-            .with_url(format!("http://{}:{}", &config.src_host, &config.src_http_port))
+            .with_url(format!(
+                "http://{}:{}",
+                &config.src_host, &config.src_http_port
+            ))
             .with_user(&config.src_user)
             .with_password(config.src_password.as_deref().unwrap_or(""))
             .with_compression(clickhouse::Compression::Lz4);
 
         let dst_client = Client::default()
-            .with_url(format!("http://{}:{}", &config.dst_host, &config.dst_http_port))
+            .with_url(format!(
+                "http://{}:{}",
+                &config.dst_host, &config.dst_http_port
+            ))
             .with_user(&config.dst_user)
             .with_password(config.dst_password.as_deref().unwrap_or(""))
             .with_compression(clickhouse::Compression::Lz4);
@@ -44,7 +50,9 @@ impl ClientMigrator {
         match config.migr_type {
             MigrationType::InternalHostToDocker => args.push(&config.dst_container),
 
-            MigrationType::DockerToDocker => args.push(config.src_container.as_deref().unwrap_or("")),
+            MigrationType::DockerToDocker => {
+                args.push(config.src_container.as_deref().unwrap_or(""))
+            }
         };
 
         args.extend([
@@ -58,7 +66,7 @@ impl ClientMigrator {
             "--password",
             config.src_password.as_deref().unwrap_or(""),
             "--query",
-            "select * from sp.events limit 10 format native",
+            "select * from sp.curr_data_tags_135 format native",
         ]);
 
         args
@@ -67,18 +75,18 @@ impl ClientMigrator {
     fn dest_transfer_args(&self) -> Vec<&str> {
         let config = &self.config;
 
-            vec![
-                "exec",
-                "-i",
-                &config.dst_container,
-                "clickhouse-client",
-                "--user",
-                &config.dst_user,
-                "--password",
-                &config.dst_password.as_deref().unwrap_or(""),
-                "--query",
-                "insert into sp.events format native",
-            ]
+        vec![
+            "exec",
+            "-i",
+            &config.dst_container,
+            "clickhouse-client",
+            "--user",
+            &config.dst_user,
+            "--password",
+            &config.dst_password.as_deref().unwrap_or(""),
+            "--query",
+            "insert into sp.curr_data_tags_135 format native",
+        ]
     }
 }
 
@@ -144,7 +152,6 @@ impl Migrator for ClientMigrator {
             .find(|ch| ch.starts_with("sp."))
             .unwrap_or(&table_name);
 
-        
         match self.dst_client.query(&ddl).execute().await {
             Ok(_) => {
                 log::info!("Таблица {} создана", table_name);
@@ -152,7 +159,10 @@ impl Migrator for ClientMigrator {
             }
             Err(e) => {
                 if e.to_string().contains("57") {
-                    log::info!("Таблица: {} уже сушествует и будет пересоздана", table_with_schema);
+                    log::info!(
+                        "Таблица: {} уже сушествует и будет пересоздана",
+                        table_with_schema
+                    );
                     self.dst_client
                         .query(&format!("drop table {}", table_with_schema))
                         .execute()
