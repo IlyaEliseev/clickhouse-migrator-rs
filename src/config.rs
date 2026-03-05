@@ -10,11 +10,11 @@ pub enum MigrationType {
 #[command(author, version, about)]
 pub struct MigratorConfig {
     /// Тип миграции
-    #[arg(long, value_enum)]
+    #[arg(long, env = "MIGR_TYPE", value_enum)]
     pub migr_type: MigrationType,
 
     /// Источник: HOST (Env: SRC_HOST)
-    #[arg(long, env = "SRC_URL", default_value = "host.docker.internal")]
+    #[arg(long, env = "SRC_HOST", default_value = "host.docker.internal")]
     pub src_host: String,
 
     /// Источник: TCP PORT (Env: SRC_TCP_PORT)
@@ -68,4 +68,8 @@ pub struct MigratorConfig {
     /// Имя таблицы (Env: TABLE_NAME)
     #[arg(short, long, env = "TABLE_NAME")]
     pub table_name: Option<String>,
+
+    /// Путь до файла конфига (записть в формате key=value)
+    #[arg(short, long, env = "CONFIG")]
+    pub config: Option<String>,
 }
