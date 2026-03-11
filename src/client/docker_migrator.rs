@@ -1,21 +1,19 @@
-use std::process::{Command, Stdio};
-
-use crate::{
-    config::{MigrationType, MigratorConfig},
-    models::TableInfo,
-    traits::Migrator,
-};
 use anyhow::{Context, Result, anyhow};
 use clickhouse::{Client, Row, RowOwned};
 use serde::de::DeserializeOwned;
+use std::process::{Command, Stdio};
 
-pub struct ClientMigrator {
+use crate::config::{MigrationType, MigratorConfig};
+use crate::models::TableInfo;
+use crate::traits::Migrator;
+
+pub struct DockerMigrator {
     src_client: Client,
     dst_client: Client,
     config: MigratorConfig,
 }
 
-impl ClientMigrator {
+impl DockerMigrator {
     pub fn new(config: MigratorConfig) -> Self {
         let src_client = Client::default()
             .with_url(format!(
@@ -90,7 +88,7 @@ impl ClientMigrator {
     }
 }
 
-impl Migrator for ClientMigrator {
+impl Migrator for DockerMigrator {
     async fn create_database(&self, db_name: &str) -> Result<()> {
         self.dst_client
             .query(&format!("CREATE DATABASE IF NOT EXISTS {}", db_name))

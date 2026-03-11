@@ -16,3 +16,8 @@ pub struct TableInfo {
     pub create_table_query: String,
     pub size: Option<String>,
 }
+
+pub enum TableType {
+    Table,
+    View,
+}

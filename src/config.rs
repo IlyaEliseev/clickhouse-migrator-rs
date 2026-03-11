@@ -1,4 +1,6 @@
-use clap::{Parser, ValueEnum};
+use clap::{CommandFactory, Parser, ValueEnum};
+use dotenvy::from_path;
+use std::{env::args, process::exit};
 
 #[derive(Clone, Copy, ValueEnum, Debug, PartialEq, Eq)]
 pub enum MigrationType {
@@ -72,4 +74,31 @@ pub struct MigratorConfig {
     /// Путь до файла конфига (записть в формате key=value)
     #[arg(short, long, env = "CONFIG")]
     pub config: Option<String>,
+}
+
+impl MigratorConfig {
+    pub fn parse_config() -> MigratorConfig {
+        let mut config_argument = args().skip_while(|arg| arg != "--config" && arg != "-c");
+
+        if config_argument.next().is_some() {
+            if let Some(path) = config_argument.next() {
+                from_path(&path).expect("Файл конфигурации не найден");
+            } else {
+                eprintln!("Путь не указан");
+                exit(1);
+            }
+        }
+
+        let config = MigratorConfig::parse();
+        if config.migr_type == MigrationType::DockerToDocker && config.src_container.is_none() {
+            let mut cmd = MigratorConfig::command();
+            cmd.error(
+                clap::error::ErrorKind::MissingRequiredArgument,
+                "--src-container обязатален, если --migr-type docker-to-docker",
+            )
+            .exit();
+        }
+
+        config
+    }
 }
