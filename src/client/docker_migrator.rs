@@ -41,7 +41,7 @@ impl DockerMigrator {
         }
     }
 
-    fn src_transfer_args(&self) -> Vec<&str> {
+    fn src_transfer_args(&self, table_info: &TableInfo) -> Vec<String> {
         let config = &self.config;
 
         let mut args = vec!["exec", "-i"];
@@ -54,6 +54,9 @@ impl DockerMigrator {
             }
         };
 
+        let table_name = table_name_with_schema(&table_info.database, &table_info.name);
+        let select_script = format!("select * from {} format native", table_name);
+
         args.extend([
             "clickhouse-client",
             "--host",
@@ -65,14 +68,16 @@ impl DockerMigrator {
             "--password",
             config.src_password.as_deref().unwrap_or(""),
             "--query",
-            "select * from sp.curr_data_tags_135 format native",
+            &select_script,
         ]);
 
-        args
+        args.into_iter().map(String::from).collect()
     }
 
-    fn dest_transfer_args(&self) -> Vec<&str> {
+    fn dest_transfer_args(&self, table_info: &TableInfo) -> Vec<String> {
         let config = &self.config;
+        let table_name = table_name_with_schema(&table_info.database, &table_info.name);
+        let insert_script = format!("insert into {} format native", table_name);
 
         vec![
             "exec",
@@ -84,8 +89,11 @@ impl DockerMigrator {
             "--password",
             &config.dst_password.as_deref().unwrap_or(""),
             "--query",
-            "insert into sp.curr_data_tags_135 format native",
+            &insert_script,
         ]
+        .into_iter()
+        .map(String::from)
+        .collect()
     }
 }
 
@@ -98,10 +106,9 @@ impl Migrator for DockerMigrator {
         Ok(())
     }
 
-    async fn transfer_data(&self) -> Result<()> {
-        let config = &self.config;
-        let src_args = &self.src_transfer_args();
-        let dst_args = &self.dest_transfer_args();
+    async fn transfer_data(&self, table_info: &TableInfo) -> Result<()> {
+        let src_args = &self.src_transfer_args(&table_info);
+        let dst_args = &self.dest_transfer_args(&table_info);
 
         let mut source_proc = Command::new("docker")
             .args(src_args)
@@ -142,17 +149,11 @@ impl Migrator for DockerMigrator {
         Ok(res)
     }
 
-    async fn create_table(&self, table_info: TableInfo) -> Result<()> {
-        let database = table_info.database;
-        let table_name = table_info.name;
-        let ddl = table_info.create_table_query;
-
-        // let table_with_schema = ddl
-        //     .split_ascii_whitespace()
-        //     .find(|ch| ch.starts_with("sp."))
-        //     .unwrap_or(&table_name);
-
-        let table_with_schema = table_name_with_schema(&database, &table_name);
+    async fn create_table(&self, table_info: &TableInfo) -> Result<()> {
+        let database = &table_info.database;
+        let table_name = &table_info.name;
+        let ddl = &table_info.create_table_query;
+        let table_with_schema = table_name_with_schema(database, table_name);
 
         match self.dst_client.query(&ddl).execute().await {
             Ok(_) => {

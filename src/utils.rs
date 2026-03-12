@@ -27,6 +27,6 @@ pub fn build_tables_query(database: &str, table_type: &TableType, table_name: &s
     }
 }
 
-pub fn table_name_with_schema(database:&str, table_name:&str) -> String {
+pub fn table_name_with_schema(database: &str, table_name: &str) -> String {
     format!("{}.`{}`", database, table_name).to_string()
 }

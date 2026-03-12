@@ -23,8 +23,8 @@ pub async fn run(config: MigratorConfig) -> Result<()> {
     client.create_database(&database).await?;
 
     for row in tables {
-        client.create_table(row).await?;
-        client.transfer_data().await?;
+        client.create_table(&row).await?;
+        client.transfer_data(&row).await?;
     }
 
     let views = client
@@ -37,7 +37,7 @@ pub async fn run(config: MigratorConfig) -> Result<()> {
         .context("Fetch data error")?;
 
     for v in views {
-        client.create_table(v).await?;
+        client.create_table(&v).await?;
     }
 
     Ok(())

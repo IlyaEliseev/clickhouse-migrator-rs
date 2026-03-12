@@ -1,7 +1,7 @@
+use anyhow::Result;
 use clickhouse_migrator::config::MigratorConfig;
 use clickhouse_migrator::engine::run;
 use clickhouse_migrator::utils;
-use anyhow::{Result};
 
 #[tokio::main]
 async fn main() -> Result<()> {
