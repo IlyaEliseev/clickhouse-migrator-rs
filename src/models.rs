@@ -12,6 +12,7 @@ pub struct ClientSettings {
 
 #[derive(Row, Deserialize)]
 pub struct TableInfo {
+    pub database:String,
     pub name: String,
     pub create_table_query: String,
     pub size: Option<String>,

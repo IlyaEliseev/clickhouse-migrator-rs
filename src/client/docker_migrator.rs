@@ -6,6 +6,7 @@ use std::process::{Command, Stdio};
 use crate::config::{MigrationType, MigratorConfig};
 use crate::models::TableInfo;
 use crate::traits::Migrator;
+use crate::utils::table_name_with_schema;
 
 pub struct DockerMigrator {
     src_client: Client,
@@ -142,13 +143,16 @@ impl Migrator for DockerMigrator {
     }
 
     async fn create_table(&self, table_info: TableInfo) -> Result<()> {
+        let database = table_info.database;
         let table_name = table_info.name;
         let ddl = table_info.create_table_query;
 
-        let table_with_schema = ddl
-            .split_ascii_whitespace()
-            .find(|ch| ch.starts_with("sp."))
-            .unwrap_or(&table_name);
+        // let table_with_schema = ddl
+        //     .split_ascii_whitespace()
+        //     .find(|ch| ch.starts_with("sp."))
+        //     .unwrap_or(&table_name);
+
+        let table_with_schema = table_name_with_schema(&database, &table_name);
 
         match self.dst_client.query(&ddl).execute().await {
             Ok(_) => {
