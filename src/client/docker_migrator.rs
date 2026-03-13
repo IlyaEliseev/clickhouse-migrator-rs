@@ -7,6 +7,7 @@ use crate::config::{MigrationType, MigratorConfig};
 use crate::models::TableInfo;
 use crate::traits::Migrator;
 use crate::utils::table_name_with_schema;
+use crate::constants;
 
 pub struct DockerMigrator {
     src_client: Client,
@@ -19,7 +20,7 @@ impl DockerMigrator {
         let src_client = Client::default()
             .with_url(format!(
                 "http://{}:{}",
-                &config.src_host, &config.src_http_port
+                constants::LOCALHOST, &config.src_http_port
             ))
             .with_user(&config.src_user)
             .with_password(config.src_password.as_deref().unwrap_or(""))
@@ -28,7 +29,7 @@ impl DockerMigrator {
         let dst_client = Client::default()
             .with_url(format!(
                 "http://{}:{}",
-                &config.dst_host, &config.dst_http_port
+                constants::LOCALHOST, &config.dst_http_port
             ))
             .with_user(&config.dst_user)
             .with_password(config.dst_password.as_deref().unwrap_or(""))
