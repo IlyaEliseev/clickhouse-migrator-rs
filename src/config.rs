@@ -99,7 +99,7 @@ pub struct MigratorConfig {
     pub database: String,
 
     /// Имя таблицы
-    #[arg(short, long, env = "TABLE_NAME", value_name = "table")]
+    #[arg(short, long, env = "TABLE_NAME", value_name = "tables")]
     pub table_name: Option<String>,
 
     /// Путь до файла конфига
