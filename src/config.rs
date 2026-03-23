@@ -12,67 +12,98 @@ pub enum MigrationType {
 #[command(author, version, about)]
 pub struct MigratorConfig {
     /// Тип миграции
-    #[arg(long, env = "MIGR_TYPE", value_enum)]
+    #[arg(long, env = "MIGR_TYPE", value_enum, value_name = "type")]
     pub migr_type: MigrationType,
 
-    /// Источник: HOST (Env: SRC_HOST)
-    #[arg(long, env = "SRC_HOST", default_value = "host.docker.internal")]
+    /// HOST бд откуда копируются данные
+    #[arg(
+        long,
+        env = "SRC_HOST",
+        default_value = "host.docker.internal",
+        value_name = "host"
+    )]
     pub src_host: String,
 
-    /// Источник: TCP PORT (Env: SRC_TCP_PORT)
-    #[arg(long, env = "SRC_TCP_PORT", default_value = "9000")]
+    /// TCP PORT бд откуда копируются данные
+    #[arg(
+        long,
+        env = "SRC_TCP_PORT",
+        default_value = "9000",
+        value_name = "port"
+    )]
     pub src_tcp_port: String,
 
-    /// Источник: HTTP PORT (Env: SRC_HTTP_PORT)
-    #[arg(long, env = "SRC_HTTP_PORT", default_value = "8123")]
+    /// HTTP PORT бд откуда копируются данные
+    #[arg(
+        long,
+        env = "SRC_HTTP_PORT",
+        default_value = "8123",
+        value_name = "port"
+    )]
     pub src_http_port: String,
 
-    /// Источник: User (Env: SRC_USER)
-    #[arg(long, env = "SRC_USER", default_value = "default")]
+    /// Username бд откуда копируются данные
+    #[arg(long, env = "SRC_USER", default_value = "default", value_name = "user")]
     pub src_user: String,
 
-    /// Источник: Password (Env: SRC_PASSWORD)
-    #[arg(long, env = "SRC_PASSWORD", default_value = "")]
+    /// Password бд откуда копируются данные
+    #[arg(
+        long,
+        env = "SRC_PASSWORD",
+        default_value = "",
+        value_name = "password"
+    )]
     pub src_password: Option<String>,
 
-    /// Источник: Container (Env: SRC_CONTAINER)
-    #[arg(long, env = "SRC_CONTAINER")]
+    /// Имя контейнера бд откуда копируются данные (только для типа миграции: docker-to-docker)
+    #[arg(long, env = "SRC_CONTAINER", value_name = "container")]
     pub src_container: Option<String>,
 
-    /// Цель: HOST (Env: DST_URL)
-    #[arg(long, env = "DST_HOST", default_value = "127.0.0.1")]
+    /// HOST бд куда копирования данных
+    #[arg(
+        long,
+        env = "DST_HOST",
+        default_value = "127.0.0.1",
+        value_name = "host"
+    )]
     pub dst_host: String,
 
-    /// Источник: PORT (Env: DST_TCP_PORT)
-    #[arg(long, env = "DST_TCP_PORT")]
+    /// TCP PORT бд куда копирования данных
+    #[arg(long, env = "DST_TCP_PORT", value_name = "port")]
     pub dst_tcp_port: String,
 
-    /// Источник: PORT (Env: DST_HTTP_PORT)
-    #[arg(long, env = "DST_HTTP_PORT")]
+    /// HTTP PORT бд куда копирования данных
+    #[arg(long, env = "DST_HTTP_PORT", value_name = "port")]
     pub dst_http_port: String,
 
-    /// Цель: User (Env: DST_USER)
-    #[arg(long, env = "DST_USER")]
+    /// Username бд куда копирования данных
+    #[arg(long, env = "DST_USER", value_name = "user")]
     pub dst_user: String,
 
-    /// Цель: Password (Env: DST_PASSWORD)
-    #[arg(long, env = "DST_PASSWORD")]
+    /// Password бд куда копирования данных
+    #[arg(long, env = "DST_PASSWORD", value_name = "password")]
     pub dst_password: Option<String>,
 
-    /// Цель: Container (Env: DST_CONTAINER)
-    #[arg(long, env = "DST_CONTAINER")]
+    /// Имя docker контейнера бд куда копируются данные
+    #[arg(long, env = "DST_CONTAINER", value_name = "container")]
     pub dst_container: String,
 
-    /// База данных (Env: DB_NAME)
-    #[arg(short, long, env = "DB_NAME", default_value = "sp")]
+    /// Имя базы данных
+    #[arg(
+        short,
+        long,
+        env = "DB_NAME",
+        default_value = "sp",
+        value_name = "database"
+    )]
     pub database: String,
 
-    /// Имя таблицы (Env: TABLE_NAME)
-    #[arg(short, long, env = "TABLE_NAME")]
+    /// Имя таблицы
+    #[arg(short, long, env = "TABLE_NAME", value_name = "table")]
     pub table_name: Option<String>,
 
-    /// Путь до файла конфига (записть в формате key=value)
-    #[arg(short, long, env = "CONFIG")]
+    /// Путь до файла конфига
+    #[arg(short, long, value_name = "config")]
     pub config: Option<String>,
 }
 
