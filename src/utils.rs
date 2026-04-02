@@ -15,9 +15,14 @@ pub fn configure_logger() {
         .init();
 }
 
-pub fn build_tables_query(database: &str, table_type: &TableType, table_name: &str) -> String {
+pub fn build_tables_query(
+    database: &str,
+    table_type: &TableType,
+    table_name: &str,
+    fetch_all: bool,
+) -> String {
     let mut table_filter = String::new();
-    if !table_name.is_empty() {
+    if !table_name.is_empty() && !fetch_all {
         table_filter.push_str(&format!("AND name IN ('{}')", table_name));
     }
 
