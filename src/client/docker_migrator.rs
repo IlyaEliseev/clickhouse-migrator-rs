@@ -1,13 +1,14 @@
 use anyhow::{Context, Result, anyhow};
 use clickhouse::{Client, Row, RowOwned};
 use serde::de::DeserializeOwned;
+use std::io::Read;
 use std::process::{Command, Stdio};
 
 use crate::config::{MigrationType, MigratorConfig};
+use crate::constants;
 use crate::models::TableInfo;
 use crate::traits::Migrator;
 use crate::utils::table_name_with_schema;
-use crate::constants;
 
 pub struct DockerMigrator {
     src_client: Client,
@@ -20,7 +21,8 @@ impl DockerMigrator {
         let src_client = Client::default()
             .with_url(format!(
                 "http://{}:{}",
-                constants::LOCALHOST, &config.src_http_port
+                constants::LOCALHOST,
+                &config.src_http_port
             ))
             .with_user(&config.src_user)
             .with_password(config.src_password.as_deref().unwrap_or(""))
@@ -29,7 +31,8 @@ impl DockerMigrator {
         let dst_client = Client::default()
             .with_url(format!(
                 "http://{}:{}",
-                constants::LOCALHOST, &config.dst_http_port
+                constants::LOCALHOST,
+                &config.dst_http_port
             ))
             .with_user(&config.dst_user)
             .with_password(config.dst_password.as_deref().unwrap_or(""))
@@ -91,6 +94,7 @@ impl DockerMigrator {
             &config.dst_password.as_deref().unwrap_or(""),
             "--query",
             &insert_script,
+            "--throw_if_no_data_to_insert=0",
         ]
         .into_iter()
         .map(String::from)
@@ -130,14 +134,18 @@ impl Migrator for DockerMigrator {
             .spawn()
             .context("Import error")?;
 
-        let _ = source_proc.wait()?;
         let status_dest = dest_proc.wait()?;
+        let status_src = source_proc.wait()?;
+
+        if !status_src.success() {
+            return Err(anyhow!("Ошибка при переносе данных"));
+        }
 
         if status_dest.success() {
             log::info!("Данные перенесены");
             Ok(())
         } else {
-            Err(anyhow!("Ошибка при переносе данных {}", "events"))
+            Err(anyhow!("Ошибка при переносе данных {}", &table_info.name))
         }
     }
 
