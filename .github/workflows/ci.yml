@@ -42,13 +42,13 @@ jobs:
 
         steps:
             - name: Checkout repository
-                uses: actions/checkout@v4
+              uses: actions/checkout@v4
         
             - name: Setup Rust toolchain
-                uses: dtolnay/rust-toolchain@stable
+              uses: dtolnay/rust-toolchain@stable
         
             - name: Enable Rust caching
-                uses: swatinem/rust-cache@v2
+              uses: swatinem/rust-cache@v2
         
             - name: Build binary
-                run: cargo build --release --verbose
+              run: cargo build --release --verbose
