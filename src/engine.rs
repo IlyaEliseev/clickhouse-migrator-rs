@@ -3,7 +3,7 @@ use crate::config::MigratorConfig;
 use crate::models::{TableInfo, TableType};
 use crate::traits::Migrator;
 use crate::utils;
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Context, Result};
 
 pub async fn run(config: MigratorConfig) -> Result<()> {
     let database = config.database.clone();

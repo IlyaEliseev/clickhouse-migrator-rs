@@ -1,5 +1,5 @@
 use clickhouse::Row;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
 pub struct ClientSettings {
@@ -21,4 +21,5 @@ pub struct TableInfo {
 pub enum TableType {
     Table,
     View,
+    MaterializedView,
 }

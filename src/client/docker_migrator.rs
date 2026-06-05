@@ -1,7 +1,6 @@
 use anyhow::{Context, Result, anyhow};
 use clickhouse::{Client, Row, RowOwned};
 use serde::de::DeserializeOwned;
-use std::io::Read;
 use std::process::{Command, Stdio};
 
 use crate::config::{MigrationType, MigratorConfig};
