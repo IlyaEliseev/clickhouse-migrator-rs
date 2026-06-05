@@ -15,7 +15,7 @@ pub async fn run(config: MigratorConfig) -> Result<()> {
         .fetch::<TableInfo>(&utils::build_tables_query(
             &config.database,
             &TableType::Table,
-            &config.table_name.as_deref().unwrap_or(""),
+            config.table_name.as_deref().unwrap_or(""),
             config.fetch_all,
         ))
         .await
@@ -32,7 +32,7 @@ pub async fn run(config: MigratorConfig) -> Result<()> {
         .fetch::<TableInfo>(&utils::build_tables_query(
             &config.database,
             &TableType::View,
-            &config.table_name.as_deref().unwrap_or(""),
+            config.table_name.as_deref().unwrap_or(""),
             config.fetch_all,
         ))
         .await

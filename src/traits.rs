@@ -3,6 +3,7 @@ use anyhow::Result;
 use clickhouse::{Row, RowOwned};
 use serde::de::DeserializeOwned;
 
+#[allow(async_fn_in_trait)]
 pub trait Migrator {
     async fn create_database(&self, db_name: &str) -> Result<()>;
     async fn transfer_data(&self, table_info: &TableInfo) -> Result<()>;

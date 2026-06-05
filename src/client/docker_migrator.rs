@@ -111,8 +111,8 @@ impl Migrator for DockerMigrator {
     }
 
     async fn transfer_data(&self, table_info: &TableInfo) -> Result<()> {
-        let src_args = &self.src_transfer_args(&table_info);
-        let dst_args = &self.dest_transfer_args(&table_info);
+        let src_args = &self.src_transfer_args(table_info);
+        let dst_args = &self.dest_transfer_args(table_info);
 
         let mut source_proc = Command::new("docker")
             .args(src_args)
@@ -163,7 +163,7 @@ impl Migrator for DockerMigrator {
         let ddl = &table_info.create_table_query;
         let table_with_schema = table_name_with_schema(database, table_name);
 
-        match self.dst_client.query(&ddl).execute().await {
+        match self.dst_client.query(ddl).execute().await {
             Ok(_) => {
                 log::info!("Таблица {} создана", table_name);
                 Ok(())
@@ -178,7 +178,7 @@ impl Migrator for DockerMigrator {
                         .query(&format!("drop table {}", table_with_schema))
                         .execute()
                         .await?;
-                    self.dst_client.query(&ddl).execute().await?;
+                    self.dst_client.query(ddl).execute().await?;
                     log::info!("Таблица {} пересоздана", table_with_schema);
 
                     Ok(())
