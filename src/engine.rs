@@ -3,7 +3,7 @@ use crate::config::MigratorConfig;
 use crate::models::{TableInfo, TableType};
 use crate::traits::Migrator;
 use crate::utils;
-use anyhow::{Context, Result, anyhow};
+use anyhow::{Context, Result};
 
 pub async fn run(config: MigratorConfig) -> Result<()> {
     let database = config.database.clone();
@@ -16,6 +16,7 @@ pub async fn run(config: MigratorConfig) -> Result<()> {
             &config.database,
             &TableType::Table,
             &config.table_name.as_deref().unwrap_or(""),
+            config.fetch_all,
         ))
         .await
         .context("Fetch data error")?;
@@ -32,6 +33,7 @@ pub async fn run(config: MigratorConfig) -> Result<()> {
             &config.database,
             &TableType::View,
             &config.table_name.as_deref().unwrap_or(""),
+            config.fetch_all,
         ))
         .await
         .context("Fetch data error")?;

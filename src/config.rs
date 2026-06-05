@@ -105,6 +105,15 @@ pub struct MigratorConfig {
     /// Путь до файла конфига
     #[arg(short, long, value_name = "config")]
     pub config: Option<String>,
+
+    /// Установить если нужно скопировать всю базу данных
+    #[arg(
+        long = "all",
+        env = "FETCH_ALL",
+        default_value_t = false,
+        value_name = "fetch_all"
+    )]
+    pub fetch_all: bool,
 }
 
 impl MigratorConfig {
