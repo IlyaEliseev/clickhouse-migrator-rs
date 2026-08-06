@@ -1,3 +1,4 @@
+pub mod clickhouse_client_args_builder;
 pub mod client;
 pub mod config;
 pub mod constants;
