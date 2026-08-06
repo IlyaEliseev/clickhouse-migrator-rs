@@ -3,6 +3,7 @@ use clickhouse::{Client, Row, RowOwned};
 use serde::de::DeserializeOwned;
 use std::process::{Command, Stdio};
 
+use crate::clickhouse_client_args_builder::ClickhouseArgs;
 use crate::config::{MigrationType, MigratorConfig};
 use crate::constants;
 use crate::models::TableInfo;
@@ -44,60 +45,62 @@ impl DockerMigrator {
         }
     }
 
-    fn src_transfer_args(&self, table_info: &TableInfo) -> Vec<String> {
+    fn src_transfer_args(&self, table_info: &TableInfo) -> Result<Vec<String>> {
         let config = &self.config;
 
-        let mut args = vec!["exec", "-i"];
+        let mut args = vec!["exec".to_string(), "-i".to_string()];
 
         match config.migr_type {
-            MigrationType::InternalHostToDocker => args.push(&config.dst_container),
+            MigrationType::InternalHostToDocker => args.push(config.dst_container.clone()),
 
-            MigrationType::DockerToDocker => {
-                args.push(config.src_container.as_deref().unwrap_or(""))
-            }
+            MigrationType::DockerToDocker => args.push(
+                config
+                    .src_container
+                    .clone()
+                    .as_deref()
+                    .unwrap_or("")
+                    .to_string(),
+            ),
         };
 
         let table_name = table_name_with_schema(&table_info.database, &table_info.name);
         let select_script = format!("select * from {} format native", table_name);
 
-        args.extend([
-            "clickhouse-client",
-            "--host",
-            &config.src_host,
-            "--port",
-            &config.src_tcp_port,
-            "--user",
-            &config.src_user,
-            "--password",
-            config.src_password.as_deref().unwrap_or(""),
-            "--query",
-            &select_script,
-        ]);
+        let client_args = ClickhouseArgs::create()
+            .with_host(&config.src_host)
+            .with_port(&config.src_tcp_port)
+            .with_user(&config.src_user)
+            .with_password(config.src_password.as_deref().unwrap_or(""))
+            .with_query(select_script)
+            .build()?;
 
-        args.into_iter().map(String::from).collect()
+        args.extend(client_args.to_array_args());
+
+        Ok(args)
     }
 
-    fn dest_transfer_args(&self, table_info: &TableInfo) -> Vec<String> {
+    fn dest_transfer_args(&self, table_info: &TableInfo) -> Result<Vec<String>> {
         let config = &self.config;
         let table_name = table_name_with_schema(&table_info.database, &table_info.name);
         let insert_script = format!("insert into {} format native", table_name);
 
-        vec![
-            "exec",
-            "-i",
-            &config.dst_container,
-            "clickhouse-client",
-            "--user",
-            &config.dst_user,
-            "--password",
-            &config.dst_password.as_deref().unwrap_or(""),
-            "--query",
-            &insert_script,
-            "--throw_if_no_data_to_insert=0",
-        ]
-        .into_iter()
-        .map(String::from)
-        .collect()
+        let client_args = ClickhouseArgs::create()
+            .with_host(&config.src_host)
+            .with_port(&config.src_tcp_port)
+            .with_user(&config.src_user)
+            .with_password(config.src_password.as_deref().unwrap_or(""))
+            .with_query(insert_script)
+            .build()?;
+
+        let mut args = vec![
+            "exec".to_string(),
+            "-i".to_string(),
+            config.dst_container.clone(),
+        ];
+
+        args.extend(client_args.to_array_args());
+
+        Ok(args)
     }
 }
 
@@ -111,8 +114,8 @@ impl Migrator for DockerMigrator {
     }
 
     async fn transfer_data(&self, table_info: &TableInfo) -> Result<()> {
-        let src_args = &self.src_transfer_args(table_info);
-        let dst_args = &self.dest_transfer_args(table_info);
+        let src_args = &self.src_transfer_args(table_info)?;
+        let dst_args = &self.dest_transfer_args(table_info)?;
 
         let mut source_proc = Command::new("docker")
             .args(src_args)
@@ -187,5 +190,82 @@ impl Migrator for DockerMigrator {
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn create_test_docker_migrator(migr_type: MigrationType) -> DockerMigrator {
+        DockerMigrator {
+            src_client: Client::default(),
+            dst_client: Client::default(),
+            config: MigratorConfig {
+                migr_type,
+                src_host: "localhost".to_string(),
+                src_tcp_port: "9000".to_string(),
+                src_http_port: "8123".to_string(),
+                src_user: "default".to_string(),
+                src_password: Some("".to_string()),
+                src_container: Some("src_container".to_string()),
+                dst_host: "localhost".to_string(),
+                dst_tcp_port: "9001".to_string(),
+                dst_http_port: "8124".to_string(),
+                dst_user: "default".to_string(),
+                dst_password: Some("".to_string()),
+                dst_container: "dst_container".to_string(),
+                database: "db".to_string(),
+                table_name: Some("tb_name".to_string()),
+                config: Some("".to_string()),
+                fetch_all: false,
+            },
+        }
+    }
+
+    fn create_test_table_info() -> TableInfo {
+        TableInfo {
+            database: "db".to_string(),
+            name: "table".to_string(),
+            create_table_query: "".to_string(),
+            size: Some("".to_string()),
+        }
+    }
+
+    #[test]
+    fn internal_host_to_docker_src_transfer_args() {
+        let docker_migrator = create_test_docker_migrator(MigrationType::InternalHostToDocker);
+
+        let table_info = create_test_table_info();
+
+        let args = docker_migrator.src_transfer_args(&table_info).unwrap();
+
+        assert_eq!(args[0], "exec");
+        assert_eq!(args[1], "-i");
+        assert_eq!(args[2], docker_migrator.config.dst_container);
+    }
+
+    #[test]
+    fn docker_to_docker_src_transfer_args() {
+        let docker_migrator = create_test_docker_migrator(MigrationType::DockerToDocker);
+        let table_info = create_test_table_info();
+
+        let args = docker_migrator.src_transfer_args(&table_info).unwrap();
+
+        assert_eq!(args[0], "exec");
+        assert_eq!(args[1], "-i");
+        assert_eq!(args[2], docker_migrator.config.src_container.unwrap());
+    }
+
+    #[test]
+    fn dest_transfer_args() {
+        let docker_migrator = create_test_docker_migrator(MigrationType::DockerToDocker);
+        let table_info = create_test_table_info();
+
+        let args = docker_migrator.dest_transfer_args(&table_info).unwrap();
+
+        assert_eq!(args[0], "exec");
+        assert_eq!(args[1], "-i");
+        assert_eq!(args[2], docker_migrator.config.dst_container);
     }
 }
