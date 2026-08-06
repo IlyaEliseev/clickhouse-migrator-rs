@@ -31,7 +31,7 @@ pub fn build_tables_query(
             "SELECT database, name, create_table_query, formatReadableSize(total_bytes) size \
              FROM system.tables \
              WHERE database = '{}' AND engine {}  AND engine != 'Distributed' {}",
-            database, "NOT LIKE '%View%'", &table_filter
+            database, "NOT LIKE '%View%'", table_filter
         )
         .trim_end()
         .to_string(),
@@ -39,7 +39,7 @@ pub fn build_tables_query(
             "SELECT database, name, create_table_query, formatReadableSize(total_bytes) size \
              FROM system.tables \
              WHERE database = '{}' AND engine {} AND engine != 'Distributed' {}",
-            database, "LIKE '%View%'", &table_filter
+            database, "LIKE '%View%'", table_filter
         )
         .trim_end()
         .to_string(),

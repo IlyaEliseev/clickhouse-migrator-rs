@@ -22,7 +22,7 @@ impl DockerMigrator {
             .with_url(format!(
                 "http://{}:{}",
                 constants::LOCALHOST,
-                &config.src_http_port
+                config.src_http_port
             ))
             .with_user(&config.src_user)
             .with_password(config.src_password.as_deref().unwrap_or(""))
@@ -32,7 +32,7 @@ impl DockerMigrator {
             .with_url(format!(
                 "http://{}:{}",
                 constants::LOCALHOST,
-                &config.dst_http_port
+                config.dst_http_port
             ))
             .with_user(&config.dst_user)
             .with_password(config.dst_password.as_deref().unwrap_or(""))
@@ -147,7 +147,7 @@ impl Migrator for DockerMigrator {
             log::info!("Данные перенесены");
             Ok(())
         } else {
-            Err(anyhow!("Ошибка при переносе данных {}", &table_info.name))
+            Err(anyhow!("Ошибка при переносе данных {}", table_info.name))
         }
     }
 
