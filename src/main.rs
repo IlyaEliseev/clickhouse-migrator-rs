@@ -7,6 +7,7 @@ use clickhouse_migrator::utils;
 async fn main() -> Result<()> {
     utils::configure_logger();
     let config = MigratorConfig::parse_config();
+    println!("{:?}", &config);
     run(config).await?;
 
     Ok(())

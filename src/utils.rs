@@ -8,7 +8,7 @@ pub fn configure_logger() {
             writeln!(
                 buf,
                 "{} {}",
-                chrono::Local::now().format("%Y-%m-%dT%H:%M:%S%"),
+                chrono::Local::now().format("%Y-%m-%dT%H:%M:%S"),
                 record.args()
             )
         })

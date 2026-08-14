@@ -85,10 +85,10 @@ impl DockerMigrator {
         let insert_script = format!("insert into {} format native", table_name);
 
         let client_args = ClickhouseArgs::create()
-            .with_host(&config.src_host)
-            .with_port(&config.src_tcp_port)
-            .with_user(&config.src_user)
-            .with_password(config.src_password.as_deref().unwrap_or(""))
+            .with_host(&config.dst_host)
+            .with_port("9000")
+            .with_user(&config.dst_user)
+            .with_password(config.dst_password.as_deref().unwrap_or(""))
             .with_query(insert_script)
             .build()?;
 
@@ -99,6 +99,7 @@ impl DockerMigrator {
         ];
 
         args.extend(client_args.to_array_args());
+        args.push("--throw_if_no_data_to_insert=0".to_string());
 
         Ok(args)
     }
@@ -116,6 +117,8 @@ impl Migrator for DockerMigrator {
     async fn transfer_data(&self, table_info: &TableInfo) -> Result<()> {
         let src_args = &self.src_transfer_args(table_info)?;
         let dst_args = &self.dest_transfer_args(table_info)?;
+        println!("{:?}", &src_args);
+        println!("{:?}", &dst_args);
 
         let mut source_proc = Command::new("docker")
             .args(src_args)
