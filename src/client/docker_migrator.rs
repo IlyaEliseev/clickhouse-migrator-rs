@@ -117,8 +117,6 @@ impl Migrator for DockerMigrator {
     async fn transfer_data(&self, table_info: &TableInfo) -> Result<()> {
         let src_args = &self.src_transfer_args(table_info)?;
         let dst_args = &self.dest_transfer_args(table_info)?;
-        println!("{:?}", &src_args);
-        println!("{:?}", &dst_args);
 
         let mut source_proc = Command::new("docker")
             .args(src_args)
